@@ -10,7 +10,9 @@
     "build": "cross-env NODE_ENV=production webpack --progress --hide-modules"
   },
   "dependencies": {
-    "vue": "^2.5.11"
+    "bootstrap-vue": "^2.0.0-rc.11",
+    "vue": "^2.5.11",
+    "vue-draggable": "^1.0.6"
   },
   "browserslist": [
     "> 1%",
@@ -25,6 +27,7 @@
     "cross-env": "^5.2.0",
     "css-loader": "^0.28.11",
     "file-loader": "^1.1.11",
+    "vue-draggable-directive": "^1.0.2",
     "vue-loader": "^13.7.2",
     "vue-template-compiler": "^2.5.16",
     "webpack": "^3.12.0",

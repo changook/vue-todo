@@ -50,7 +50,6 @@ input:focus {
 }
 .inputBox {
   background: white;
-  height: 50px;
   line-height: 50px;
   border-radius: 5px;
 }
