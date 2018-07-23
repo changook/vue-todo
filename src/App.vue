@@ -3,13 +3,19 @@
         <TodoHeader></TodoHeader>
         <TodoInput v-on:addTodo="addTodo"></TodoInput>
 
-        <TodoList class="favorite-todo-list" type="favorite" v-bind:todoLists="favoriteTodoItems" @removeTodo="removeTodo" @modifyTodo="modifyTodo" @modifyIsDone="modifyIsDone">
-            <h3 slot="header">favorite todo list</h3>
-        </TodoList>
+        <div v-drag-and-drop:options="options">
+            <TodoList type="favorite" v-bind:todoLists="favoriteTodoItems" @removeTodo="removeTodo"
+                      @modifyTodo="modifyTodo"
+                      @modifyIsDone="modifyIsDone">
+                <h3 slot="header">favorite todo list</h3>
+            </TodoList>
 
-        <TodoList v-bind:todoLists="todoItems" type="normal" @removeTodo="removeTodo" @modifyTodo="modifyTodo" @modifyIsDone="modifyIsDone">
-            <h3 slot="header">todo list</h3>
-        </TodoList>
+            <TodoList type="normal" v-bind:todoLists="todoItems" @removeTodo="removeTodo"
+                      @modifyTodo="modifyTodo"
+                      @modifyIsDone="modifyIsDone">
+                <h3 slot="header">todo list</h3>
+            </TodoList>
+        </div>
 
         <TodoFooter v-on:removeAll="clearAll"></TodoFooter>
     </div>
@@ -28,6 +34,16 @@
                 allTodoItems: [],
                 favoriteTodoItems: [],
                 todoItems: [],
+                options: {
+                    dropzoneSelector: 'ul',
+                    draggableSelector: 'li',
+                    excludeOlderBrowsers: true,
+                    multipleDropzonesItemsDraggingEnabled: true,
+                    showDropzoneAreas: true,
+                    onDrop: this.onDrop,
+                    onDragstart: function(event) { console.log('onDragstart') },
+                    onDragend: function(event) { console.log('onDragend') }
+                },
             }
         },
         methods: {
@@ -36,15 +52,14 @@
                 this.localStorageUpdate();
             },
 
-            addTodo(todoItem) {
-                console.log('addTodo', todoItem);
-
+            addTodo(todoItem, endDateTime) {
                 let tempTodoItem = {
                     'id': this.getNextId(),
                     'todo': todoItem,
                     'isFavorite': 0,
                     'isDone': 0,
-                    'priority': this.getNextPriority()
+                    'priority': this.getNextPriority(),
+                    'endDateTime' : endDateTime
                 };
 
                 this.allTodoItems.push(tempTodoItem);
@@ -67,6 +82,18 @@
                         return i;
                     }
                 }
+
+                return -1;
+            },
+
+            getTargetItemIndex(targetItem, id) {
+                for(let i = 0; i < targetItem.length; i++) {
+                    if (targetItem[i].id == id) {
+                        return i;
+                    }
+                }
+
+                return -1;
             },
 
             removeTodo(todoItemId) {
@@ -104,7 +131,7 @@
             settingItems(data) {
                 console.log(data);
 
-                let tempFavoriteTodoItems, tempTodoItems = [];
+                let tempFavoriteTodoItems = [], tempTodoItems = [];
 
                 for (let i = 0; i < data.length; i++) {
                     if (data[i].isFavorite) {
@@ -121,9 +148,99 @@
 
                     return 0;
                 });
+                tempFavoriteTodoItems.sort(function (a, b) {
+                    if (a.priority < b.priority) {
+                        return 1;
+                    }
+
+                    return 0;
+                });
 
                 this.favoriteTodoItems = tempFavoriteTodoItems;
                 this.todoItems = tempTodoItems;
+            },
+
+            onDrop(event) {
+                let targetItemObj = $(event.items[0]);
+
+                this.changeOrder(
+                    targetItemObj.data('itemid'),
+                    targetItemObj.parents('section:first').attr('type'),
+                    targetItemObj.parents('ul:first').find('li').index(targetItemObj)
+                );
+            },
+
+            setItemsPriority(items) {
+                let itemLength = items.length;
+
+                for(let i = 0; i < itemLength; i++) {
+                    items[i].priority = itemLength - i;
+                }
+
+                return items;
+            },
+
+            changeOrder(id, orderType, orderNo) {
+                console.log('changeOrder', id, orderType, orderNo);
+
+                let targetItem = this.allTodoItems[this.getItemIndex(id)];
+                let beforeTargetIsFavorite = targetItem.isFavorite;
+                let changeTargetIsFavorite = (orderType == 'favorite') ? true : false;
+
+                let tempFavoriteTodoItems = this.favoriteTodoItems;
+                let tempTodoItems = this.todoItems;
+
+                this.allTodoItems[this.getItemIndex(id)].isFavorite = changeTargetIsFavorite;
+
+                if (beforeTargetIsFavorite) {
+                    let beforeIndex = this.getTargetItemIndex(tempFavoriteTodoItems, id);
+
+                    tempFavoriteTodoItems.splice(beforeIndex, 1);
+
+                    if (beforeTargetIsFavorite == changeTargetIsFavorite) {
+                        // if (beforeIndex < orderNo) {
+                        //     orderNo--;
+                        // }
+
+                        tempFavoriteTodoItems.splice(orderNo, 0, targetItem);
+
+                    } else {
+                        tempTodoItems.splice(orderNo, 0, targetItem);
+                    }
+
+                } else {
+                    let beforeIndex = this.getTargetItemIndex(tempTodoItems, id);
+
+                    tempTodoItems.splice(beforeIndex, 1);
+
+                    if (beforeTargetIsFavorite == changeTargetIsFavorite) {
+                        // if (beforeIndex < orderNo) {
+                        //     orderNo--;
+                        // }
+
+                        tempTodoItems.splice(orderNo, 0, targetItem);
+
+                    } else {
+                        tempFavoriteTodoItems.splice(orderNo, 0, targetItem);
+                    }
+                }
+
+                tempTodoItems = this.setItemsPriority(tempTodoItems);
+                tempFavoriteTodoItems = this.setItemsPriority(tempFavoriteTodoItems);
+
+                let tempNewAllItems = tempFavoriteTodoItems.concat(tempTodoItems);
+
+                tempNewAllItems.sort(function (a, b) {
+                    if (a.id > b.id) {
+                        return 1;
+                    }
+
+                    return 0;
+                });
+
+                this.allTodoItems = tempNewAllItems;
+                this.localStorageUpdate();
+
             }
         },
 

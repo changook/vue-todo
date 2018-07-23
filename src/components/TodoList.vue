@@ -4,40 +4,32 @@
             <!--  -->
         </slot>
 
-        <!--<div v-drag-and-drop:options="options">-->
-            <!--<ul class="drag-wrapper">-->
-                <!--<li v-for="(todoItem, index) in todoLists" :key="todoItem.id" class="shadow">-->
-                    <!--<i class="checkBtn fa fa-check" aria-hidden="true" v-show="todoItem.isDone"></i>-->
+        <!--<transition-group name="list" tag="ul">-->
+        <ul name="list">
+            <li v-for="(todoItem, index) in todoLists" :key="todoItem.id" class="shadow" :data-itemid="todoItem.id" @click="liClick()">
+                <b-row class="text-center">
+                    <b-col sm="1" class="text-left">
+                        <i class="checkBtn fa fa-check" aria-hidden="true" v-show="todoItem.isDone"></i>
+                        <input type="checkbox" v-model="todoItem.isDone" v-show="!todoItem.isDone" @click="modify_done(todoItem.id)" />
+                    </b-col>
 
-                    <!--<b-form-checkbox v-model="todoItem.isDone" v-show="!todoItem.isDone" @change="modify_done(todoItem.id)">-->
-                    <!--</b-form-checkbox>-->
-                    <!--&lt;!&ndash;<input type="checkbox" v-model="todoItem.isDone" v-show="!todoItem.isDone" @click="modify_done(todoItem.id)" />&ndash;&gt;-->
+                    <b-col sm="8" class="text-left">
+                        <a @click="showModifyTodo(todoItem)">{{ todoItem.todo }}</a>
+                    </b-col>
 
-                    <!--<a @click="showModifyTodo(todoItem)">{{ todoItem.todo }}</a>-->
+                    <b-col sm="2" class="text-right">
+                        <span class="text-right">{{ leftDate(todoItem.endDateTime) }}</span>
+                    </b-col>
 
-                    <!--<span class="removeBtn" @click="removeTodo(todoItem.id)">-->
-                      <!--<i class="fa fa-trash-o" aria-hidden="true"></i>-->
-                    <!--</span>-->
-                <!--</li>-->
-            <!--</ul>-->
-        <!--</div>-->
-
-        <transition-group v-drag-and-drop:options="options" name="list" tag="ul">
-            <li v-for="(todoItem, index) in todoLists" :key="todoItem.id" class="shadow">
-                <i class="checkBtn fa fa-check" aria-hidden="true" v-show="todoItem.isDone"></i>
-
-                <!--<b-form-checkbox v-model="todoItem.isDone" v-show="!todoItem.isDone" @click="modify_done(todoItem.id)">-->
-                <!--</b-form-checkbox>-->
-
-                <input type="checkbox" v-model="todoItem.isDone" v-show="!todoItem.isDone" @click="modify_done(todoItem.id)" />
-
-                <a @click="showModifyTodo(todoItem)">{{ todoItem.todo }}</a>
-
-                <span class="removeBtn" @click="removeTodo(todoItem.id)">
-                  <i class="fa fa-trash-o" aria-hidden="true"></i>
-                </span>
+                    <b-col sm="1" class="text-right">
+                        <span class="removeBtn" @click="removeTodo(todoItem.id)">
+                          <i class="fa fa-trash-o" aria-hidden="true"></i>
+                        </span>
+                    </b-col>
+                </b-row>
             </li>
-        </transition-group>
+        </ul>
+        <!--</transition-group>-->
 
         <InputModal v-if="showInputModal" @close="showInputModal = false" :todoItem="targetModifyItem" @modifyTodo="modifyTodo">
             <h3 slot="header">수정</h3>
@@ -57,18 +49,6 @@
                 type: null,
                 showInputModal: false,
                 targetModifyItem: null,
-                options: {
-                    dropzoneSelector: 'ul',
-                    draggableSelector: 'li',
-                    excludeOlderBrowsers: true,
-                    multipleDropzonesItemsDraggingEnabled: true,
-                    showDropzoneAreas: true,
-                    onDrop: function(event) {},
-                    onDragstart: function(event) {
-                        console.log($(event.items[0]).index());
-                    },
-                    onDragend: this.onDragend
-                },
             };
         },
 
@@ -89,30 +69,28 @@
             },
             modify_done(id)
             {
-                this.$emit('modifyIsDone', id, true)
+                this.$emit('modifyIsDone', id, true);
             },
-            onDragend(event) {
-                let ownerSectionObj = $(event.owner).parents('section:first'),
-                    dropTargetSectionObj = $(event.droptarget).parents('section:first');
 
-//                if (ownerSectionObj.is(dropTargetSectionObj)) {
-//                    this.$emit('modifyIsPriority', id, true)
-//                }
+            liClick()
+            {
+                $('li').attr('aria-grabbed', false);
+            },
 
-//                console.log(ownerSectionObj.equal);
+            leftDate(datetime) {
+                let nowDate = new Date();
+                let diffDays = nowDate.diffDays(new Date(datetime));
 
-
-
-                console.log('onDragend', event);
-                console.log(event.owner);
-                console.log($(event.items[0]));
-                console.log( $(event.items[0]).parents('ul:first') );
-                console.log( $(event.items[0]).parents('ul:first').find('li').index($(event.items[0])) );
-                console.log($(event.owner).parents('section:first').is('.favorite-todo-list'));
+                if (diffDays > 0) {
+                    return 'D' + '+' + diffDays;
+                } else if (diffDays == 0) {
+                    return 'D-day';
+                } else {
+                    return 'D' + diffDays;
+                }
             }
         },
         mounted() {
-            console.log(this.todoLists);
         },
 
         components: {
@@ -130,10 +108,6 @@
         animation-name: nodeInserted;
     }
 
-    /*.custom-control-label:before, .custom-control-label:before {*/
-        /*margin-top:12px;*/
-    /*}*/
-
     .custom-control.custom-checkbox {
         margin-top:12px;
     }
@@ -141,8 +115,14 @@
 </style>
 
 <style scoped>
+    section {
+        margin-top:20px;
+    }
+
     ul {
-        min-height:50px;
+        padding-top:15px;
+        padding-bottom:50px;
+        margin-bottom:0;
         list-style-type: none;
         padding-left: 0px;
         margin-top: 0;
@@ -197,7 +177,7 @@
 
     /* drop target state */
     ul[aria-dropeffect="move"] {
-        border-color:#68b;
+        border-color:#c7c7c7;
         background:#fff;
     }
 
@@ -205,14 +185,14 @@
     ul[aria-dropeffect="move"]:focus,
     ul[aria-dropeffect="move"].dragover
     {
-        height:50px;
+        padding-bottom:15px;
         outline:none;
         box-shadow:0 0 0 1px #fff, 0 0 0 3px #68b;
     }
 
     /* draggable items */
     li {
-        /*display:block;*/
+        display:block;
         /*list-style-type:none;*/
         /*margin:0 0 2px 0;*/
         /*padding:0.2em 0.4em;*/
